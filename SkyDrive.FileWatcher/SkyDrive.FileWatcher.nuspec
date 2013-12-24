@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+	<metadata>
+		<id>SkyDrive.FileWatcher</id>
+		<version>0.1</version>
+		<title>SkyDrive.FileWatcher</title>
+		<authors>Sergii Bomko</authors>
+		<owners>Sergii Bomko</owners>
+		<requireLicenseAcceptance>false</requireLicenseAcceptance>
+		<description>File watcher for SkyDrive</description>
+		<copyright>Copyright ©  2013</copyright>
+		<tags>LiveSDK SkyDrive FileWatcher</tags>
+		<dependencies>
+			<dependency id="LiveSDK" version="5.5" />
+		</dependencies>
+	</metadata>
+</package>

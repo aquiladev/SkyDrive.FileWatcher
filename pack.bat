@@ -1,0 +1,1 @@
+nuget pack SkyDrive.FileWatcher\SkyDrive.FileWatcher.csproj -Prop Configuration=Release
