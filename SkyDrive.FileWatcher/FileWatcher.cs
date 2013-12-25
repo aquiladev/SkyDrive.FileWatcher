@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace SkyDrive
 {
-	public class LiveWatcher : IFileWatcher
+	public class FileWatcher : IFileWatcher
 	{
 		public int Interval { get; private set; }
 		public event EventHandler Changed;
@@ -16,9 +16,9 @@ namespace SkyDrive
 		private readonly ILiveController _controller;
 		private readonly Timer _timer;
 
-		public LiveWatcher(ILiveController controller) : this(controller, 10) { }
+		public FileWatcher(ILiveController controller) : this(controller, 10) { }
 
-		public LiveWatcher(ILiveController controller, int interval)
+		public FileWatcher(ILiveController controller, int interval)
 		{
 			_controller = controller;
 			_timer = new Timer(_ => OnTick(), null, Timeout.Infinite, Timeout.Infinite);
