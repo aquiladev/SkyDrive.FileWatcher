@@ -85,6 +85,7 @@
     </Compile>
     <Compile Include="ILiveController.cs" />
     <Compile Include="LiveController.cs" />
+    <Compile Include="LivePath.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

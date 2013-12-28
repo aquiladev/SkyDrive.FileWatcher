@@ -11,18 +11,15 @@ namespace SkyDrive
 	public class LiveController : IRefreshTokenHandler, ILiveController
 	{
 		public string ClientId { get; private set; }
-		public string LocalPath { get; private set; }
-		public string FileName { get; private set; }
 
-		private const string SkyDrivePath = "me/skydrive";
-		private const string FilesPath = "{0}/files";
 		private const string EndUrl = "https://login.live.com/oauth20_desktop.srf";
 
 		private AuthForm _authForm;
 		private LiveAuthClient _liveAuthClient;
 		private LiveConnectClient _liveConnectClient;
 		private RefreshTokenInfo _refreshTokenInfo;
-		private readonly AsyncLock _lock = new AsyncLock();
+		private readonly bool _ensureFolder;
+		private readonly AsyncLock _lock;
 
 		private readonly List<string> _scopes = new List<string>
 		{
@@ -57,24 +54,15 @@ namespace SkyDrive
 			}
 		}
 
-		public LiveController(string clientId, string path)
+		public LiveController(string clientId)
+			: this(clientId, false) { }
+
+		public LiveController(string clientId, bool ensureFolder)
 		{
 			ClientId = clientId;
-			InitPath(path);
+			_ensureFolder = ensureFolder;
+			_lock = new AsyncLock();
 			InitLive();
-		}
-
-		private void InitPath(string path)
-		{
-			if (string.IsNullOrEmpty(path))
-			{
-				throw new ArgumentNullException("path");
-			}
-
-			const string separator = @"\";
-			var items = path.Split(new[] { separator }, StringSplitOptions.None);
-			LocalPath = string.Join(separator, items, 0, items.Length - 1);
-			FileName = items[items.Length - 1];
 		}
 
 		private async void InitLive()
@@ -114,7 +102,7 @@ namespace SkyDrive
 			return Task.Factory.StartNew(() => _refreshTokenInfo);
 		}
 
-		public async Task<string> GetBlob()
+		public async Task<string> GetFile(string path)
 		{
 			using (await _lock.LockAsync())
 			{
@@ -122,11 +110,11 @@ namespace SkyDrive
 				{
 					SignIn();
 				}
-				return await ReadFile();
+				return await ReadFile(path);
 			}
 		}
 
-		public async void SaveBlob(string value)
+		public async void SaveFile(string path, string value)
 		{
 			using (await _lock.LockAsync())
 			{
@@ -134,7 +122,7 @@ namespace SkyDrive
 				{
 					SignIn();
 				}
-				await WriteFile(value);
+				await WriteFile(path, value);
 			}
 		}
 
@@ -156,19 +144,8 @@ namespace SkyDrive
 			CleanupAuthForm();
 			if (result.AuthorizeCode != null)
 			{
-				try
-				{
-					var session = AuthClient.ExchangeAuthCodeAsync(result.AuthorizeCode);
-					_liveConnectClient = new LiveConnectClient(session.Result);
-				}
-				catch (LiveAuthException aex)
-				{
-					//this.LogOutput("Failed to retrieve access token. Error: " + aex.Message);
-				}
-				catch (LiveConnectException cex)
-				{
-					//this.LogOutput("Failed to retrieve the user's data. Error: " + cex.Message);
-				}
+				var session = AuthClient.ExchangeAuthCodeAsync(result.AuthorizeCode);
+				_liveConnectClient = new LiveConnectClient(session.Result);
 			}
 			else
 			{
@@ -176,22 +153,23 @@ namespace SkyDrive
 			}
 		}
 
-		private async Task<string> ReadFile()
+		private async Task<string> ReadFile(string path)
 		{
-			var folderId = await GetSyncFolder();
-			if (string.IsNullOrEmpty(folderId))
+			var livePath = LivePath.Parse(path);
+			var folderPath = await GetFolderId(livePath);
+			if (string.IsNullOrEmpty(folderPath))
 			{
 				return null;
 			}
 
-			var path = string.Format(FilesPath, folderId);
-			var result = await _liveConnectClient.GetAsync(path);
+			var fullFolderPath = livePath.GetFolderPath(folderPath);
+			var result = await _liveConnectClient.GetAsync(fullFolderPath);
 			var files = result.Result["data"] as List<object>;
 			var file = files == null
 				? null
 				: files
 					.Select(item => item as IDictionary<string, object>)
-					.FirstOrDefault(f => f["name"].ToString() == FileName);
+					.FirstOrDefault(f => f["name"].ToString() == livePath.FileName);
 
 			if (file == null)
 			{
@@ -209,42 +187,82 @@ namespace SkyDrive
 			return value;
 		}
 
-		private async Task<LiveOperationResult> WriteFile(string value)
+		private async Task<LiveOperationResult> WriteFile(string path, string value)
 		{
-			var folderId = await GetSyncFolder();
+			var livePath = LivePath.Parse(path);
+			var folderId = await GetFolderId(livePath);
 			if (string.IsNullOrEmpty(folderId))
 			{
 				return null;
 			}
-
-			return await _liveConnectClient.UploadAsync(folderId, FileName,
+			return await _liveConnectClient.UploadAsync(folderId, livePath.FileName,
 				new MemoryStream(System.Text.Encoding.UTF8.GetBytes(value)),
 				OverwriteOption.Overwrite);
 		}
 
-		private async Task<string> GetSyncFolder()
+		private async Task<string> GetFolderId(LivePath path)
 		{
 			string folderId = null;
-			var result = await _liveConnectClient.GetAsync(string.Format(FilesPath, SkyDrivePath));
-			if (result != null)
+			var result = await _liveConnectClient.GetAsync(path.SkyDriveFiles);
+			if (result != null && !string.IsNullOrEmpty(path.FilePath))
 			{
 				var items = result.Result["data"] as List<object>;
 				folderId = items == null
 					? null
 					: items.Select(item => item as IDictionary<string, object>)
-						.Where(file => file["name"].ToString() == LocalPath)
+						.Where(file => file["name"].ToString() == path.PathChain[0])
 						.Select(file => file["id"].ToString())
 						.FirstOrDefault();
 
-				if (String.IsNullOrEmpty(folderId))
+				if (String.IsNullOrEmpty(folderId) && _ensureFolder)
 				{
-					var folderData = new Dictionary<string, object> { { "name", LocalPath } };
-					result = await _liveConnectClient.PostAsync(SkyDrivePath, folderData);
+					var folderData = new Dictionary<string, object> { { "name", path.PathChain[0] } };
+					result = await _liveConnectClient.PostAsync(path.SkyDrivePath, folderData);
 					dynamic res = result.Result;
 					folderId = res.id;
 				}
+
+				if (path.PathChain.Length > 1)
+				{
+					return GetFolderIdRecursive(path, folderId, 1);
+				}
 			}
 			return folderId;
+		}
+
+		private string GetFolderIdRecursive(LivePath path, string folderId, int step)
+		{
+			while (true)
+			{
+				string subFolderId = null;
+				var result = _liveConnectClient.GetAsync(path.GetFolderPath(folderId)).Result;
+				if (result != null)
+				{
+					var items = result.Result["data"] as List<object>;
+					subFolderId = items == null
+						? null
+						: items.Select(item => item as IDictionary<string, object>)
+							.Where(file => file["name"].ToString() == path.PathChain[step])
+							.Select(file => file["id"].ToString())
+							.FirstOrDefault();
+
+					if (String.IsNullOrEmpty(subFolderId) && _ensureFolder)
+					{
+						var folderData = new Dictionary<string, object> { { "name", path.PathChain[step] } };
+						result = _liveConnectClient.PostAsync(folderId, folderData).Result;
+						dynamic res = result.Result;
+						subFolderId = res.id;
+					}
+
+					if (path.PathChain.Length >= step + 2)
+					{
+						folderId = subFolderId;
+						step = ++step;
+						continue;
+					}
+				}
+				return subFolderId;
+			}
 		}
 	}
 }

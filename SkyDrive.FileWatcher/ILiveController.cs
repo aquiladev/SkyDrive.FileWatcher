@@ -4,7 +4,7 @@ namespace SkyDrive
 {
 	public interface ILiveController
 	{
-		Task<string> GetBlob();
-		void SaveBlob(string value);
+		Task<string> GetFile(string path);
+		void SaveFile(string path, string value);
 	}
 }

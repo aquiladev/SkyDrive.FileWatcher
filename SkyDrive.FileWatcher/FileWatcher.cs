@@ -13,14 +13,22 @@ namespace SkyDrive
 
 		private string _actualSum;
 		private string _lastSum;
-		private readonly ILiveController _controller;
+		private readonly string _filePath;
 		private readonly Timer _timer;
+		private readonly ILiveController _controller;
 
-		public FileWatcher(ILiveController controller) : this(controller, 10) { }
+		public FileWatcher(string clientId, string path)
+			: this(clientId, path, 10) { }
 
-		public FileWatcher(ILiveController controller, int interval)
+		public FileWatcher(string clientId, string path, int interval)
+			: this(new LiveController(clientId), path, interval) { }
+
+		public FileWatcher(ILiveController controller, string path) : this(controller, path, 10) { }
+
+		public FileWatcher(ILiveController controller, string path, int interval)
 		{
 			_controller = controller;
+			_filePath = path;
 			_timer = new Timer(_ => OnTick(), null, Timeout.Infinite, Timeout.Infinite);
 			_actualSum = string.Empty;
 			_lastSum = string.Empty;
@@ -68,7 +76,7 @@ namespace SkyDrive
 
 		private async void Checksum()
 		{
-			var blob = await _controller.GetBlob();
+			var blob = await _controller.GetFile(_filePath);
 			if (blob == null)
 			{
 				return;
