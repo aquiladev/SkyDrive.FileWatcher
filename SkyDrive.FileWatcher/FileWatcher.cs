@@ -8,7 +8,7 @@ namespace SkyDrive
 {
 	public class FileWatcher : IFileWatcher
 	{
-		public event EventHandler Changed;
+		public event FileWatcherEventHandler Changed;
 
 		private string _actualSum;
 		private string _lastSum;
@@ -39,7 +39,7 @@ namespace SkyDrive
 			_timer.Stop();
 		}
 
-		private void OnChanged(EventArgs e)
+		private void OnChanged(FileWatcherEventArgs e)
 		{
 			if (Changed != null)
 			{
@@ -62,7 +62,7 @@ namespace SkyDrive
 				return;
 			}
 
-			OnChanged(new EventArgs());
+			OnChanged(new FileWatcherEventArgs(data));
 			_lastSum = _actualSum;
 		}
 

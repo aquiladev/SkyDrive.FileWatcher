@@ -51,7 +51,7 @@ namespace SkyDrive.Tests
 		}
 
 		[Test]
-		public void RaiseTimer_ChecksumIsCorrect_DontRaiseEvent()
+		public void RaiseTimer_ChecksumsAreEqual_DontRaiseEvent()
 		{
 			//Arrange
 			CreateWatcher(GetCkecksum(_value));
@@ -64,7 +64,7 @@ namespace SkyDrive.Tests
 		}
 
 		[Test]
-		public void RaiseTimer_ChecksumActualValueDifferentThanLast_RaiseEvent()
+		public void RaiseTimer_ChecksumsAreDifferent_RaiseEvent()
 		{
 			//Arrange
 			CreateWatcher("blabla");
@@ -74,6 +74,22 @@ namespace SkyDrive.Tests
 
 			//Assert
 			Assert.AreEqual(1, _countOfCalled);
+		}
+
+		[Test]
+		public void RaiseTimer_ChecksumsAreDifferent_EventArgsAreCorrect()
+		{
+			//Arrange
+			FileWatcherEventArgs eventArgs = null;
+			var watsher = CreateWatcher("blabla");
+			watsher.Changed += (obj, e) => { eventArgs = e; };
+
+			//Act
+			_timer.Raise(t => t.Tick += null, _timer, EventArgs.Empty);
+
+			//Assert
+			Assert.IsNotNull(eventArgs);
+			Assert.AreEqual(_value, eventArgs.Value);
 		}
 
 		[Test]

@@ -1,10 +1,8 @@
-﻿using System;
-
-namespace SkyDrive
+﻿namespace SkyDrive
 {
 	public interface IFileWatcher
 	{
-		event EventHandler Changed;
+		event FileWatcherEventHandler Changed;
 		void Start();
 		void Stop();
 	}
