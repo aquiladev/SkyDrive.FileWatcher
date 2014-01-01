@@ -19,6 +19,7 @@ namespace SkyDrive
 		private LiveAuthClient _liveAuthClient;
 		private LiveConnectClient _liveConnectClient;
 		private RefreshTokenInfo _refreshTokenInfo;
+		private bool _isCanceledAccess = false;
 		private readonly bool _ensureFolder;
 		private readonly AsyncLock _lock;
 		private readonly List<string> _scopes;
@@ -87,6 +88,11 @@ namespace SkyDrive
 		{
 			using (await _lock.LockAsync())
 			{
+				if (_isCanceledAccess)
+				{
+					return null;
+				}
+
 				if (AuthSession == null)
 				{
 					SignIn();
@@ -99,6 +105,11 @@ namespace SkyDrive
 		{
 			using (await _lock.LockAsync())
 			{
+				if (_isCanceledAccess)
+				{
+					return;
+				}
+
 				if (AuthSession == null)
 				{
 					SignIn();
@@ -152,14 +163,25 @@ namespace SkyDrive
 				var session = AuthClient.ExchangeAuthCodeAsync(result.AuthorizeCode);
 				_liveConnectClient = new LiveConnectClient(session.Result);
 			}
-			//else
-			//{
-			//	this.LogOutput(string.Format("Error received. Error: {0} Detail: {1}", result.ErrorCode, result.ErrorDescription));
-			//}
+			else
+			{
+				_isCanceledAccess = true;
+				//this.LogOutput(string.Format("Error received. Error: {0} Detail: {1}", result.ErrorCode, result.ErrorDescription));
+			}
 		}
 
 		private async Task<string> ReadFile(string path)
 		{
+			if (string.IsNullOrEmpty(path))
+			{
+				throw new ArgumentNullException("path");
+			}
+
+			if (_isCanceledAccess)
+			{
+				return null;
+			}
+
 			var livePath = LivePath.Parse(path);
 			var folderPath = await GetFolderId(livePath);
 			if (string.IsNullOrEmpty(folderPath))
@@ -194,6 +216,16 @@ namespace SkyDrive
 
 		private async Task<LiveOperationResult> WriteFile(string path, string value)
 		{
+			if (string.IsNullOrEmpty(path))
+			{
+				throw new ArgumentNullException("path");
+			}
+
+			if (_isCanceledAccess)
+			{
+				return null;
+			}
+
 			var livePath = LivePath.Parse(path);
 			var folderId = await GetFolderId(livePath);
 			if (string.IsNullOrEmpty(folderId))

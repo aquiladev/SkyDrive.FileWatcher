@@ -31,7 +31,7 @@ namespace SkyDrive
 			{
 				if (_callback != null)
 				{
-					_callback(new AuthResult(this.webBrowser.Url));
+					_callback(new AuthResult(webBrowser.Url));
 				}
 			}
 		}
