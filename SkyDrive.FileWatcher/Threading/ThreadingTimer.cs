@@ -40,7 +40,7 @@ namespace SkyDrive.Threading
 				{
 					if (Tick != null)
 					{
-						Tick(this, new EventArgs());
+						Tick(this, EventArgs.Empty);
 					}
 				});
 				thread.SetApartmentState(ApartmentState.STA);

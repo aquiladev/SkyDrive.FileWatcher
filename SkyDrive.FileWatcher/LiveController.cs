@@ -219,23 +219,20 @@ namespace SkyDrive
 						.Select(file => file["id"].ToString())
 						.FirstOrDefault();
 
-				if (String.IsNullOrEmpty(folderId) && _ensureFolder)
+				if (string.IsNullOrEmpty(folderId) && _ensureFolder)
 				{
-					var folderData = new Dictionary<string, object> { { "name", path.PathChain[0] } };
-					result = await _liveConnectClient.PostAsync(path.SkyDrivePath, folderData);
-					dynamic res = result.Result;
-					folderId = res.id;
+					folderId = await CreateFolder(path.PathChain[0], path.SkyDrivePath);
 				}
 
 				if (path.PathChain.Length > 1)
 				{
-					return GetFolderIdRecursive(path, folderId, 1);
+					return await GetFolderIdRecursive(path, folderId, 1);
 				}
 			}
 			return folderId;
 		}
 
-		private string GetFolderIdRecursive(LivePath path, string folderId, int step)
+		private async Task<string> GetFolderIdRecursive(LivePath path, string folderId, int step)
 		{
 			while (true)
 			{
@@ -251,12 +248,9 @@ namespace SkyDrive
 							.Select(file => file["id"].ToString())
 							.FirstOrDefault();
 
-					if (String.IsNullOrEmpty(subFolderId) && _ensureFolder)
+					if (string.IsNullOrEmpty(subFolderId) && _ensureFolder)
 					{
-						var folderData = new Dictionary<string, object> { { "name", path.PathChain[step] } };
-						result = _liveConnectClient.PostAsync(folderId, folderData).Result;
-						dynamic res = result.Result;
-						subFolderId = res.id;
+						subFolderId = await CreateFolder(path.PathChain[step], folderId);
 					}
 
 					if (path.PathChain.Length >= step + 2)
@@ -268,6 +262,24 @@ namespace SkyDrive
 				}
 				return subFolderId;
 			}
+		}
+
+		private async Task<string> CreateFolder(string folderName, string parentFolder)
+		{
+			if (string.IsNullOrEmpty(folderName))
+			{
+				throw new ArgumentNullException("folderName");
+			}
+
+			if (string.IsNullOrEmpty(parentFolder))
+			{
+				throw new ArgumentNullException("parentFolder");
+			}
+
+			var folderData = new Dictionary<string, object> { { "name", folderName } };
+			var result = await _liveConnectClient.PostAsync(parentFolder, folderData);
+			dynamic res = result.Result;
+			return res.id;
 		}
 	}
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using NUnit.Framework;
 
 namespace SkyDrive.Tests
@@ -100,7 +101,7 @@ namespace SkyDrive.Tests
 			CollectionAssert.AreEqual(GetPathChain(Path), livePath.PathChain);
 		}
 
-		private string[] GetPathChain(string path)
+		private static IEnumerable<string> GetPathChain(string path)
 		{
 			return path.Split(new[] { "\\" }, StringSplitOptions.None);
 		}

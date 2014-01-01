@@ -66,7 +66,7 @@ namespace SkyDrive
 			_lastSum = _actualSum;
 		}
 
-		private string GetChecksum(string data)
+		private static string GetChecksum(string data)
 		{
 			using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(data)))
 			{
