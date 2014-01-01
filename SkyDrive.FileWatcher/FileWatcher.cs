@@ -2,50 +2,44 @@
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
+using SkyDrive.Threading;
 
 namespace SkyDrive
 {
 	public class FileWatcher : IFileWatcher
 	{
-		public int Interval { get; private set; }
 		public event EventHandler Changed;
 
 		private string _actualSum;
 		private string _lastSum;
 		private readonly string _filePath;
-		private readonly Timer _timer;
+		private readonly ITimer _timer;
 		private readonly ILiveController _controller;
+		
+		public FileWatcher(string clientId, string path, int interval = 10)
+			: this(new LiveController(clientId), new ThreadingTimer(interval), path) { }
 
-		public FileWatcher(string clientId, string path)
-			: this(clientId, path, 10) { }
-
-		public FileWatcher(string clientId, string path, int interval)
-			: this(new LiveController(clientId), path, interval) { }
-
-		public FileWatcher(ILiveController controller, string path) : this(controller, path, 10) { }
-
-		public FileWatcher(ILiveController controller, string path, int interval)
+		public FileWatcher(ILiveController controller, ITimer timer, string path)
 		{
 			_controller = controller;
+			_timer = timer;
+			_timer.Tick += (sender, args) => Checksum();
 			_filePath = path;
-			_timer = new Timer(_ => OnTick(), null, Timeout.Infinite, Timeout.Infinite);
 			_actualSum = string.Empty;
 			_lastSum = string.Empty;
-			Interval = interval;
 		}
 
 		public void Start()
 		{
-			_timer.Change(0, GetInterval());
+			_timer.Start();
 		}
 
 		public void Stop()
 		{
-			_timer.Change(Timeout.Infinite, Timeout.Infinite);
+			_timer.Stop();
 		}
 
-		protected virtual void OnChanged(EventArgs e)
+		private void OnChanged(EventArgs e)
 		{
 			if (Changed != null)
 			{
@@ -53,42 +47,15 @@ namespace SkyDrive
 			}
 		}
 
-		private void OnTick()
-		{
-			_timer.Change(Timeout.Infinite, Timeout.Infinite);
-			try
-			{
-				var thread = new Thread(Checksum);
-				thread.SetApartmentState(ApartmentState.STA);
-				thread.Start();
-			}
-			finally
-			{
-				var interval = GetInterval();
-				_timer.Change(interval, interval);
-			}
-		}
-
-		private int GetInterval()
-		{
-			return (int)TimeSpan.FromSeconds(Interval).TotalMilliseconds;
-		}
-
 		private async void Checksum()
 		{
-			var blob = await _controller.GetFile(_filePath);
-			if (blob == null)
+			var data = await _controller.GetFile(_filePath);
+			if (data == null)
 			{
 				return;
 			}
 
-			using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(blob)))
-			{
-				using (var md5 = MD5.Create())
-				{
-					_actualSum = BitConverter.ToString(md5.ComputeHash(stream));
-				}
-			}
+			_actualSum = GetChecksum(data);
 
 			if (_actualSum == _lastSum)
 			{
@@ -97,6 +64,17 @@ namespace SkyDrive
 
 			OnChanged(new EventArgs());
 			_lastSum = _actualSum;
+		}
+
+		private string GetChecksum(string data)
+		{
+			using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(data)))
+			{
+				using (var md5 = MD5.Create())
+				{
+					return BitConverter.ToString(md5.ComputeHash(stream));
+				}
+			}
 		}
 	}
 }

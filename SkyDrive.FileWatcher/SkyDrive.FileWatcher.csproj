@@ -73,9 +73,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AsyncLock.cs" />
+    <Compile Include="Threading\AsyncLock.cs" />
+    <Compile Include="Threading\AsyncSemaphore.cs" />
     <Compile Include="AuthResult.cs" />
     <Compile Include="FileWatcher.cs" />
+    <Compile Include="FileWatcherEventArgs.cs" />
     <Compile Include="IFileWatcher.cs" />
     <Compile Include="AuthForm.cs">
       <SubType>Form</SubType>
@@ -84,9 +86,11 @@
       <DependentUpon>AuthForm.cs</DependentUpon>
     </Compile>
     <Compile Include="ILiveController.cs" />
+    <Compile Include="Threading\ITimer.cs" />
     <Compile Include="LiveController.cs" />
     <Compile Include="LivePath.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Threading\ThreadingTimer.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Fonts\LiveSymbol.ttf" />

@@ -13,17 +13,17 @@ namespace SkyDrive
 		}
 		public string SkyDriveFiles { get; private set; }
 		public string FilePath { get; private set; }
-		public string[] PathChain { get; private set; }
 		public string FileName { get; private set; }
+		public string[] PathChain { get; private set; }
 
 		private const string FilesTemplate = "{0}/files";
 		private const string Separator = @"\";
 
-		public LivePath(string path, string[] pathChain, string fileName)
+		public LivePath(string path, string fileName)
 		{
 			FilePath = path;
-			PathChain = pathChain;
 			FileName = fileName;
+			PathChain = GetPathChain(path);
 			SkyDriveFiles = string.Format(FilesTemplate, SkyDrivePath);
 		}
 
@@ -39,12 +39,15 @@ namespace SkyDrive
 				throw new ArgumentNullException("path");
 			}
 
-			var items = path.Split(new[] { Separator }, StringSplitOptions.None);
-			var pathItems = items.Take(items.Length - 1).ToArray();
+			var items = GetPathChain(path);
 			return new LivePath(
-				string.Join(Separator, pathItems),
-				pathItems,
+				string.Join(Separator, items.Take(items.Length - 1).ToArray()),
 				items[items.Length - 1]);
+		}
+
+		private static string[] GetPathChain(string path)
+		{
+			return path.Split(new[] { Separator }, StringSplitOptions.None);
 		}
 	}
 }

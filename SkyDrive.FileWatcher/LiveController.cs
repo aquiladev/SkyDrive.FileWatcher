@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Live;
+using SkyDrive.Threading;
 
 namespace SkyDrive
 {
@@ -20,14 +21,7 @@ namespace SkyDrive
 		private RefreshTokenInfo _refreshTokenInfo;
 		private readonly bool _ensureFolder;
 		private readonly AsyncLock _lock;
-
-		private readonly List<string> _scopes = new List<string>
-		{
-			"wl.signin",
-			"wl.skydrive",
-			"wl.skydrive_update",
-			"wl.offline_access"
-		};
+		private readonly List<string> _scopes;
 
 		private LiveAuthClient AuthClient
 		{
@@ -62,7 +56,55 @@ namespace SkyDrive
 			ClientId = clientId;
 			_ensureFolder = ensureFolder;
 			_lock = new AsyncLock();
+			_scopes = new List<string>
+			{
+				"wl.signin",
+				"wl.skydrive",
+				"wl.skydrive_update",
+				"wl.offline_access"
+			};
 			InitLive();
+		}
+
+		#region Implementation IRefreshTokenHandler
+
+		public Task SaveRefreshTokenAsync(RefreshTokenInfo tokenInfo)
+		{
+			return Task.Factory.StartNew(() =>
+			{
+				_refreshTokenInfo = tokenInfo;
+			});
+		}
+
+		public Task<RefreshTokenInfo> RetrieveRefreshTokenAsync()
+		{
+			return Task.Factory.StartNew(() => _refreshTokenInfo);
+		}
+
+		#endregion
+
+		public async Task<string> GetFile(string path)
+		{
+			using (await _lock.LockAsync())
+			{
+				if (AuthSession == null)
+				{
+					SignIn();
+				}
+				return await ReadFile(path);
+			}
+		}
+
+		public async void SaveFile(string path, string value)
+		{
+			using (await _lock.LockAsync())
+			{
+				if (AuthSession == null)
+				{
+					SignIn();
+				}
+				await WriteFile(path, value);
+			}
 		}
 
 		private async void InitLive()
@@ -89,43 +131,6 @@ namespace SkyDrive
 			_authForm = null;
 		}
 
-		public Task SaveRefreshTokenAsync(RefreshTokenInfo tokenInfo)
-		{
-			return Task.Factory.StartNew(() =>
-			{
-				_refreshTokenInfo = tokenInfo;
-			});
-		}
-
-		public Task<RefreshTokenInfo> RetrieveRefreshTokenAsync()
-		{
-			return Task.Factory.StartNew(() => _refreshTokenInfo);
-		}
-
-		public async Task<string> GetFile(string path)
-		{
-			using (await _lock.LockAsync())
-			{
-				if (AuthSession == null)
-				{
-					SignIn();
-				}
-				return await ReadFile(path);
-			}
-		}
-
-		public async void SaveFile(string path, string value)
-		{
-			using (await _lock.LockAsync())
-			{
-				if (AuthSession == null)
-				{
-					SignIn();
-				}
-				await WriteFile(path, value);
-			}
-		}
-
 		private void SignIn()
 		{
 			if (_authForm != null) return;
@@ -147,10 +152,10 @@ namespace SkyDrive
 				var session = AuthClient.ExchangeAuthCodeAsync(result.AuthorizeCode);
 				_liveConnectClient = new LiveConnectClient(session.Result);
 			}
-			else
-			{
-				//this.LogOutput(string.Format("Error received. Error: {0} Detail: {1}", result.ErrorCode, result.ErrorDescription));
-			}
+			//else
+			//{
+			//	this.LogOutput(string.Format("Error received. Error: {0} Detail: {1}", result.ErrorCode, result.ErrorDescription));
+			//}
 		}
 
 		private async Task<string> ReadFile(string path)
