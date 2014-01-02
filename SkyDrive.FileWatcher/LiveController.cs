@@ -152,7 +152,7 @@ namespace SkyDrive
 			}
 			else
 			{
-			_isCanceledAccess = true;
+				_isCanceledAccess = true;
 				_lock.RejectAsyncs();
 				OnAuthCanceled(EventArgs.Empty);
 				//this.LogOutput(string.Format("Error received. Error: {0} Detail: {1}", result.ErrorCode, result.ErrorDescription));
@@ -195,14 +195,23 @@ namespace SkyDrive
 			}
 
 			var livePath = LivePath.Parse(path);
-			var folderPath = await GetFolderId(livePath);
-			if (string.IsNullOrEmpty(folderPath))
+			string folderId;
+			if (!string.IsNullOrEmpty(livePath.FilePath))
 			{
-				return null;
+				folderId = await GetFolderId(livePath);
+				if (string.IsNullOrEmpty(folderId))
+				{
+					throw new LiveFolderNotFoundException(livePath.FilePath);
+				}
+
+				folderId = livePath.GetFolderPath(folderId);
+			}
+			else
+			{
+				folderId = livePath.SkyDriveFiles;
 			}
 
-			var fullFolderPath = livePath.GetFolderPath(folderPath);
-			var result = await _liveConnectClient.GetAsync(fullFolderPath);
+			var result = await _liveConnectClient.GetAsync(folderId);
 			var files = result.Result["data"] as List<object>;
 			var file = files == null
 				? null
@@ -239,11 +248,20 @@ namespace SkyDrive
 			}
 
 			var livePath = LivePath.Parse(path);
-			var folderId = await GetFolderId(livePath);
-			if (string.IsNullOrEmpty(folderId))
+			string folderId;
+			if (!string.IsNullOrEmpty(livePath.FilePath))
 			{
-				return null;
+				folderId = await GetFolderId(livePath);
+				if (string.IsNullOrEmpty(folderId))
+				{
+					throw new LiveFolderNotFoundException(livePath.FilePath);
+				}
 			}
+			else
+			{
+				folderId = livePath.SkyDrivePath;
+			}
+
 			return await _liveConnectClient.UploadAsync(folderId, livePath.FileName,
 				new MemoryStream(System.Text.Encoding.UTF8.GetBytes(value)),
 				OverwriteOption.Overwrite);
