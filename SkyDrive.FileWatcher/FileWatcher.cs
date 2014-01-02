@@ -10,6 +10,7 @@ namespace SkyDrive
 	{
 		public event FileWatcherEventHandler Changed;
 
+		private bool _locked;
 		private string _actualSum;
 		private string _lastSum;
 		private readonly string _filePath;
@@ -22,6 +23,7 @@ namespace SkyDrive
 		public FileWatcher(ILiveController controller, ITimer timer, string path)
 		{
 			_controller = controller;
+			_controller.AuthCanceled += (sender, args) => Lock();
 			_timer = timer;
 			_timer.Tick += (sender, args) => Checksum();
 			_filePath = path;
@@ -31,6 +33,11 @@ namespace SkyDrive
 
 		public void Start()
 		{
+			if (_locked)
+			{
+				return;
+			}
+
 			_timer.Start();
 		}
 
@@ -39,12 +46,10 @@ namespace SkyDrive
 			_timer.Stop();
 		}
 
-		private void OnChanged(FileWatcherEventArgs e)
+		private void Lock()
 		{
-			if (Changed != null)
-			{
-				Changed(this, e);
-			}
+			_locked = true;
+			_timer.Stop();
 		}
 
 		private async void Checksum()
@@ -74,6 +79,14 @@ namespace SkyDrive
 				{
 					return BitConverter.ToString(md5.ComputeHash(stream));
 				}
+			}
+		}
+
+		private void OnChanged(FileWatcherEventArgs e)
+		{
+			if (Changed != null)
+			{
+				Changed(this, e);
 			}
 		}
 	}

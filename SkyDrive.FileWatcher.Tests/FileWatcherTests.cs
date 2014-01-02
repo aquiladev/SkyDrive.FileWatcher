@@ -26,7 +26,7 @@ namespace SkyDrive.Tests
 			_path = @"path\subpath\qwe.as";
 			_value = "someValueSomething";
 			_countOfCalled = 0;
-			_timer = MockRepository.GenerateStub<ITimer>();
+			_timer = MockRepository.GenerateMock<ITimer>();
 			_controller = MockRepository.GenerateMock<ILiveController>();
 			_controller.Stub(c => c.GetFile(string.Empty))
 				.IgnoreArguments()
@@ -107,6 +107,21 @@ namespace SkyDrive.Tests
 		}
 
 		[Test]
+		public void Start_WatcherLocked_DidntCallTimerStart()
+		{
+			//Arrange
+			_timer.Expect(t => t.Start()).Repeat.Never();
+			var watcher = CreateWatcher();
+			watcher.SetPrivateField("_locked", true);
+
+			//Act
+			watcher.Start();
+
+			//Assert
+			_timer.VerifyAllExpectations();
+		}
+
+		[Test]
 		public void Stop_CallTimerStop()
 		{
 			//Arrange
@@ -120,12 +135,39 @@ namespace SkyDrive.Tests
 			_timer.VerifyAllExpectations();
 		}
 
+		[Test]
+		public void RaiseAuthCanceled_Lock_SetLocked()
+		{
+			//Arrange
+			var watcher = CreateWatcher();
+
+			//Act
+			_controller.Raise(t => t.AuthCanceled += null, _controller, EventArgs.Empty);
+
+			//Assert
+			Assert.AreEqual(true, watcher.GetLocked());
+		}
+
+		[Test]
+		public void RaiseAuthCanceled_Lock_CallTimerStop()
+		{
+			//Arrange
+			_timer.Expect(t => t.Stop()).Repeat.Once();
+			CreateWatcher();
+
+			//Act
+			_controller.Raise(t => t.AuthCanceled += null, _controller, EventArgs.Empty);
+
+			//Assert
+			_timer.VerifyAllExpectations();
+		}
+
 		#region "Helpers"
 
 		private FileWatcher CreateWatcher(string lastSum = "")
 		{
 			var watcher = new FileWatcher(_controller, _timer, _path);
-			watcher.SetLastSum(lastSum);
+			watcher.SetPrivateField("_lastSum", lastSum);
 			watcher.Changed += (obj, e) => { ++_countOfCalled; };
 			return watcher;
 		}
@@ -146,13 +188,22 @@ namespace SkyDrive.Tests
 
 	internal static class FileWatcherTestExtentions
 	{
-		public static void SetLastSum(this FileWatcher watcher, string value)
+		public static void SetPrivateField(this FileWatcher watcher, string name, object value)
 		{
-			var field = typeof(FileWatcher).GetField("_lastSum", BindingFlags.Instance | BindingFlags.NonPublic);
+			var field = typeof(FileWatcher).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic);
 			if (field == null)
 				return;
 
 			field.SetValue(watcher, value);
+		}
+
+		public static bool GetLocked(this FileWatcher watcher)
+		{
+			var field = typeof(FileWatcher).GetField("_locked", BindingFlags.Instance | BindingFlags.NonPublic);
+			if (field == null)
+				return false;
+
+			return (bool)field.GetValue(watcher);
 		}
 	}
 }

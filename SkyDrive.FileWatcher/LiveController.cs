@@ -11,6 +11,8 @@ namespace SkyDrive
 {
 	public class LiveController : IRefreshTokenHandler, ILiveController
 	{
+		public event EventHandler AuthCanceled;
+
 		public string ClientId { get; private set; }
 
 		private const string EndUrl = "https://login.live.com/oauth20_desktop.srf";
@@ -127,21 +129,6 @@ namespace SkyDrive
 			}
 		}
 
-		private void AuthForm_FormClosed(object sender, FormClosedEventArgs e)
-		{
-			CleanupAuthForm();
-		}
-
-		private void CleanupAuthForm()
-		{
-			if (_authForm == null)
-			{
-				return;
-			}
-			_authForm.Dispose();
-			_authForm = null;
-		}
-
 		private void SignIn()
 		{
 			if (_authForm != null) return;
@@ -165,9 +152,34 @@ namespace SkyDrive
 			}
 			else
 			{
-				_isCanceledAccess = true;
+			_isCanceledAccess = true;
+				_lock.RejectAsyncs();
+				OnAuthCanceled(EventArgs.Empty);
 				//this.LogOutput(string.Format("Error received. Error: {0} Detail: {1}", result.ErrorCode, result.ErrorDescription));
 			}
+		}
+
+		private void OnAuthCanceled(EventArgs e)
+		{
+			if (AuthCanceled != null)
+			{
+				AuthCanceled(this, e);
+			}
+		}
+
+		private void AuthForm_FormClosed(object sender, FormClosedEventArgs e)
+		{
+			CleanupAuthForm();
+		}
+
+		private void CleanupAuthForm()
+		{
+			if (_authForm == null)
+			{
+				return;
+			}
+			_authForm.Dispose();
+			_authForm = null;
 		}
 
 		private async Task<string> ReadFile(string path)

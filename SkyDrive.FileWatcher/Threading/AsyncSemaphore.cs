@@ -45,5 +45,10 @@ namespace SkyDrive.Threading
 			if (toRelease != null)
 				toRelease.SetResult(true);
 		}
+
+		public void CleanQueue()
+		{
+			_waiters.Clear();
+		}
 	}
 }

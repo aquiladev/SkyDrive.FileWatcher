@@ -25,6 +25,11 @@ namespace SkyDrive.Threading
 					TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
 		}
 
+		public void RejectAsyncs()
+		{
+			_semaphore.CleanQueue();
+		}
+
 		public struct Releaser : IDisposable
 		{
 			private readonly AsyncLock _toRelease;

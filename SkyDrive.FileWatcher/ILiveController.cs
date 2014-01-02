@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 
 namespace SkyDrive
 {
@@ -6,5 +7,6 @@ namespace SkyDrive
 	{
 		Task<string> GetFile(string path);
 		void SaveFile(string path, string value);
+		event EventHandler AuthCanceled;
 	}
 }
