@@ -9,7 +9,7 @@
     <projectUrl>https://github.com/aquiladev/SkyDrive.FileWatcher</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>SkyDrive.FileWatcher Pack is made for tracking files transformations in SkyDrive.</description>
-    <copyright>Copyright ©  2013</copyright>
+    <copyright>Copyright © Sergii Bomko 2014</copyright>
     <tags>LiveSDK SkyDrive FileWatcher</tags>
     <dependencies>
       <group targetFramework=".NETFramework4.0">
