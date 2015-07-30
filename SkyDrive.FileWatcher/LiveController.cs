@@ -12,30 +12,22 @@ namespace SkyDrive
 	public class LiveController : IRefreshTokenHandler, ILiveController
 	{
 		public event EventHandler AuthCanceled;
-
 		public string ClientId { get; private set; }
 
 		private const string EndUrl = "https://login.live.com/oauth20_desktop.srf";
 
 		private AuthForm _authForm;
-		private LiveAuthClient _liveAuthClient;
 		private LiveConnectClient _liveConnectClient;
 		private RefreshTokenInfo _refreshTokenInfo;
-		private bool _isCanceledAccess = false;
+		private bool _isCanceledAccess;
 		private readonly bool _ensureFolder;
 		private readonly AsyncLock _lock;
 		private readonly List<string> _scopes;
 
-		private LiveAuthClient AuthClient
+		private LiveAuthClient _liveAuthClient;
+		public LiveAuthClient AuthClient
 		{
-			get
-			{
-				if (_liveAuthClient == null)
-				{
-					AuthClient = new LiveAuthClient(ClientId, this);
-				}
-				return _liveAuthClient;
-			}
+			get { return _liveAuthClient ?? (_liveAuthClient = new LiveAuthClient(ClientId, this)); }
 			set
 			{
 				_liveAuthClient = value;
@@ -122,7 +114,7 @@ namespace SkyDrive
 
 		private async void InitLive()
 		{
-			var loginResult = await AuthClient.IntializeAsync();
+			var loginResult = await AuthClient.InitializeAsync();
 			if (loginResult.Session != null)
 			{
 				_liveConnectClient = new LiveConnectClient(loginResult.Session);

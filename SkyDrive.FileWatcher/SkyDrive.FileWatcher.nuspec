@@ -3,20 +3,19 @@
   <metadata>
     <id>SkyDrive.FileWatcher</id>
     <version>0.2.3</version>
-    <title>SkyDrive.FileWatcher</title>
     <authors>Sergii Bomko</authors>
     <owners>Sergii Bomko</owners>
+    <description>SkyDrive.FileWatcher is made for tracking files transformations in OneDrive.</description>
+    <language>en-US</language>
     <projectUrl>https://github.com/aquiladev/SkyDrive.FileWatcher</projectUrl>
+    <licenseUrl>https://raw.github.com/aquiladev/SkyDrive.FileWatcher/master/MIT-LICENSE</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>SkyDrive.FileWatcher Pack is made for tracking files transformations in SkyDrive.</description>
-    <copyright>Copyright © Sergii Bomko 2014</copyright>
-    <tags>LiveSDK SkyDrive FileWatcher</tags>
+    <copyright>© 2015 Sergii Bomko</copyright>
+    <tags>LiveSDK SkyDrive OneDrive FileWatcher</tags>
     <dependencies>
       <group targetFramework=".NETFramework4.0">
-        <dependency id="LiveSDK" version="5.5" />
+        <dependency id="LiveSDK" version="5.6.3" />
       </group>
     </dependencies>
-    <releaseNotes>
-    </releaseNotes>
   </metadata>
 </package>
